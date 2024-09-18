@@ -33,6 +33,8 @@ function processInvoiceData(customersData, invoicesData, itemsData) {
             if (fullName.includes(customerName) || customerName.includes(fullName)) {
                 matchedCustomer = customerInfo;
                 break;
+            }else{
+                matchedCustomer={'客户名称':customerName}
             }
         }
 
@@ -73,11 +75,11 @@ function processInvoiceData(customersData, invoicesData, itemsData) {
                     "受票方自然人标识":"",
                     "购买方名称": matchedCustomer['客户名称'],
                     "证件类型":"",
-                    "购买方纳税人识别号": matchedCustomer['统一社会信用代码/纳税人识别号'],
-                    "购买方地址": matchedCustomer['地址'],
-                    "购买方电话": matchedCustomer['电话'],
-                    "购买方开户银行": matchedCustomer['开户行名称'],
-                    "购买方银行账号": matchedCustomer['银行账号'],
+                    "购买方纳税人识别号": matchedCustomer['统一社会信用代码/纳税人识别号']||'',
+                    "购买方地址": matchedCustomer['地址']||'',
+                    "购买方电话": matchedCustomer['电话']||'',
+                    "购买方开户银行": matchedCustomer['开户行名称']||'',
+                    "购买方银行账号": matchedCustomer['银行账号']||'',
                     "备注":"",
                     "报废产品销售类型":"",
                     "是否展示购买方地址电话银行账号":"",
