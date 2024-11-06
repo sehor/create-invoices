@@ -86,6 +86,12 @@
         <div class="file-input">
             <label for="invoicesFile">开票信息文件：</label>
             <input type="file" id="invoicesFile" accept=".xlsx,.xls">
+            <div style="margin-top: 10px;">
+                <label for="sheetName">工作表名称：</label>
+                <input type="text" id="sheetName" placeholder="例如: Sheet1">
+                <label for="rowRange" style="margin-left: 10px;">行范围：</label>
+                <input type="text" id="rowRange" placeholder="例如: 2-10" style="width: 100px;">
+            </div>
         </div>
         <button id="processButton">转换并下载</button>
         <div id="log"></div>
