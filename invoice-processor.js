@@ -1,3 +1,11 @@
+function generateInvoiceNumber(customerName) {
+    // 生成一个大范围的随机数（-9999999到9999999之间）
+    const min = -9999999;
+    const max = 9999999;
+    const randomNum = Math.floor(Math.random() * (max - min + 1)) + min;
+    return randomNum.toString();
+}
+
 function processInvoiceData(customersData, invoicesData, itemsData) {
     // 创建客户名称到完整信息的映射
     const customerMap = {};
@@ -6,7 +14,6 @@ function processInvoiceData(customersData, invoicesData, itemsData) {
         customerMap[fullName] = customer;
     });
 
-    let invoiceNumberCounter = -1;
     const result1 = [];
     const result2 = [];
 
@@ -14,21 +21,36 @@ function processInvoiceData(customersData, invoicesData, itemsData) {
     let currentGroup = [];
     let currentCustomer = null;
     
+    // 用于存储每个客户的流水号
+    const customerInvoiceNumbers = new Map();
+    
     // 处理每一行发票数据
     invoicesData.forEach((invoice, index) => {
         const customerName = invoice['公司名称'];
+        log(`处理发票数据: 客户名称=${customerName}, 索引=${index}`);
         
         // 如果是新客户或是最后一条记录，处理当前分组
         if ((currentCustomer && currentCustomer !== customerName) || index === invoicesData.length - 1) {
+            log(`检测到新客户或最后一条记录: 当前客户=${currentCustomer}, 新客户=${customerName}`);
+            
             // 如果是最后一条记录，将其添加到当前分组
             if (index === invoicesData.length - 1) {
                 currentGroup.push(invoice);
+                log(`添加最后一条记录到当前分组, 分组大小=${currentGroup.length}`);
             }
             
             // 处理当前分组
             if (currentGroup.length > 0) {
-                // 生成新的发票流水号
-                const invoiceNumber = String(invoiceNumberCounter--);
+                // 获取或生成该客户的流水号
+                let invoiceNumber;
+                if (customerInvoiceNumbers.has(currentCustomer)) {
+                    invoiceNumber = customerInvoiceNumbers.get(currentCustomer);
+                    log(`使用已存在的流水号: ${invoiceNumber} 给客户 ${currentCustomer}`);
+                } else {
+                    invoiceNumber = generateInvoiceNumber(currentCustomer);
+                    customerInvoiceNumbers.set(currentCustomer, invoiceNumber);
+                    log(`生成新的流水号: ${invoiceNumber} 给客户 ${currentCustomer}`);
+                }
                 
                 // 查找匹配的客户信息
                 let matchedCustomer = null;
@@ -66,18 +88,16 @@ function processInvoiceData(customersData, invoicesData, itemsData) {
                     "是否展示销售方地址电话银行账号": "",
                     "购买方邮箱": "",
                     "购买方经办人姓名": "",
-                    "购买方经办人证件类型": "",
-                    "购买方经办人证件号码": "",
-                    "经办人国籍(地区)": "",
                     "经办人自然人纳税人识别号": "",
                     "放弃享受减按1%征收率原因": "",
                     "收款人": "张宗兵",
                     "复核人": "张珂珂"
                 };
                 result1.push(result1Entry);
+                log(`生成 result1 记录: 客户=${currentCustomer}, 流水号=${invoiceNumber}`);
 
                 // 生成 result2 记录
-                currentGroup.forEach(groupInvoice => {
+                currentGroup.forEach((groupInvoice, groupIndex) => {
                     const itemInfo = itemsData.find(item => item['项目名称'] === groupInvoice['品名']);
                     const amount = typeof groupInvoice['数量'] != 'string' ? 
                         groupInvoice['数量'] : 
@@ -100,16 +120,26 @@ function processInvoiceData(customersData, invoicesData, itemsData) {
                         "优惠政策类型": "",
                         "即征即退类型": ""
                     });
+                    log(`生成 result2 记录: 客户=${currentCustomer}, 流水号=${invoiceNumber}, 商品=${groupInvoice['品名']}`);
                 });
             }
             
             // 重置分组
             currentGroup = [];
+            log(`重置分组`);
         }
         
         // 更新当前客户并添加到当前分组
         currentCustomer = customerName;
         currentGroup.push(invoice);
+        log(`更新当前客户为 ${currentCustomer}, 当前分组大小=${currentGroup.length}`);
+    });
+
+    // 最后打印一下结果统计
+    log(`处理完成: result1 共 ${result1.length} 条记录, result2 共 ${result2.length} 条记录`);
+    log(`客户流水号映射:`);
+    customerInvoiceNumbers.forEach((value, key) => {
+        log(`客户: ${key} -> 流水号: ${value}`);
     });
 
     return { result1, result2 };
@@ -184,49 +214,111 @@ async function readExcelFile(file, sheetName = null, rowRange = null) {
     return jsonData;
 }
 
-
-// 将JSON数据转换为Excel并下载 (使用ExcelJS)
-function downloadExcel(data, fileName) {
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Sheet1');
-
-    if (data.length > 0) {
-        // 提取JSON对象的键作为表头
-        const headers = Object.keys(data[0]);
-        worksheet.addRow(headers); // 添加表头
-
-        // 逐行添加数据
-        data.forEach((rowData) => {
-            const row = headers.map(header => rowData[header]);
-            worksheet.addRow(row); // 添加数据行
+// 修改downloadExcel函数为fillTemplate函数
+async function fillTemplate(result1, result2, templateFile) {
+    try {
+        // 处理第一个文件（result1）
+        const workbook1 = new ExcelJS.Workbook();
+        await workbook1.xlsx.load(templateFile);
+        const worksheet1 = workbook1.worksheets[0];
+        
+        log(`开始填充第一个文件的数据，数据条数：${result1.length}`);
+        
+        // 从第4行开始填写result1数据
+        const headers1 = Object.keys(result1[0]);
+        result1.forEach((rowData, index) => {
+            const rowNumber = index + 4;
+            const row = worksheet1.getRow(rowNumber);
+            headers1.forEach((key, colIndex) => {
+                const value = rowData[key];
+                row.getCell(colIndex + 1).value = value;
+                if (typeof value === 'number') {
+                    row.getCell(colIndex + 1).numFmt = '#,##0.00';
+                }
+            });
+            row.commit();
+            log(`写入第一个文件第 ${rowNumber} 行，流水号: ${rowData['发票流水号']}`);
         });
-    }
 
-    workbook.xlsx.writeBuffer().then(function(buffer) {
-        const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-        const link = document.createElement('a');
-        link.href = window.URL.createObjectURL(blob);
-        link.download = fileName;
-        link.click();
-    }).catch(error => {
-        console.error("Error generating Excel:", error); // 捕获并打印错误
-    });
+        // 处理第二个文件（result2）
+        const workbook2 = new ExcelJS.Workbook();
+        await workbook2.xlsx.load(templateFile);
+        const worksheet2 = workbook2.worksheets[0];
+        
+        log(`开始填充第二个文件的数据，数据条数：${result2.length}`);
+        
+        // 从第4行开始填写result2数据
+        result2.forEach((rowData, index) => {
+            const rowNumber = index + 4;
+            const row = worksheet2.getRow(rowNumber);
+            const values = Object.values(rowData);
+            values.forEach((value, colIndex) => {
+                const cell = row.getCell(colIndex + 1);
+                cell.value = value;
+                if (typeof value === 'number') {
+                    cell.numFmt = '#,##0.00';
+                }
+            });
+            row.commit();
+            log(`写入第二个文件第 ${rowNumber} 行，流水号: ${rowData['发票流水号']}`);
+        });
+
+        // 生成带日期的文件名
+        const date = new Date();
+        const dateStr = `${date.getFullYear()}${(date.getMonth()+1).toString().padStart(2,'0')}${date.getDate().toString().padStart(2,'0')}`;
+        const originalName = templateFile.name.replace('.xlsx', '');
+
+        // 导出第一个文件
+        const buffer1 = await workbook1.xlsx.writeBuffer();
+        const blob1 = new Blob([buffer1], { 
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+        const url1 = window.URL.createObjectURL(blob1);
+        const link1 = document.createElement('a');
+        link1.href = url1;
+        link1.download = `${originalName}_开票信息_${dateStr}.xlsx`;
+        document.body.appendChild(link1);
+        link1.click();
+        document.body.removeChild(link1);
+        window.URL.revokeObjectURL(url1);
+        
+        log(`第一个文件导出完成: ${link1.download}`);
+
+        // 导出第二个文件
+        const buffer2 = await workbook2.xlsx.writeBuffer();
+        const blob2 = new Blob([buffer2], { 
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+        const url2 = window.URL.createObjectURL(blob2);
+        const link2 = document.createElement('a');
+        link2.href = url2;
+        link2.download = `${originalName}_商品明细_${dateStr}.xlsx`;
+        document.body.appendChild(link2);
+        link2.click();
+        document.body.removeChild(link2);
+        window.URL.revokeObjectURL(url2);
+        
+        log(`第二个文件导出完成: ${link2.download}`);
+
+        return [link1.download, link2.download];
+    } catch (error) {
+        const errorMsg = `填充模板失败: ${error.message}`;
+        log(errorMsg);
+        throw new Error(errorMsg);
+    }
 }
 
-
-
-async function handleFiles(customersFile, invoicesFile, itemsFile) {
+// 修改handleFiles函数
+async function handleFiles(customersFile, invoicesFile, itemsFile, templateFile) {
     try {
         log('开始处理文件...');
         
-        // 获取工作表名称和行范围
         const sheetName = document.getElementById('sheetName').value.trim();
         const rowRange = document.getElementById('rowRange').value.trim();
         
         const customersData = await readExcelFile(customersFile);
         log(`成功读取客户数据，共 ${customersData.length} 条记录`);
         
-        // 使用指定的工作表名称和行范围读取发票数据
         const invoicesData = await readExcelFile(invoicesFile, 
             sheetName || null, 
             rowRange || null
@@ -238,26 +330,26 @@ async function handleFiles(customersFile, invoicesFile, itemsFile) {
 
         const { result1, result2 } = processInvoiceData(customersData, invoicesData, itemsData);
 
-        log(`生成excel文件result1，共 ${result1.length} 条记录`);
-        log(`生成excel文件result2，共 ${result2.length} 条记录`);
+        log(`生成开票信息表，共 ${result1.length} 条记录`);
+        log(`生成商品明细表，共 ${result2.length} 条记录`);
 
-        downloadExcel(result1, 'result1.xlsx');
-        downloadExcel(result2, 'result2.xlsx');
-
-        log("处理完成，结果已生成并开始下载");
+        // 填充模板并下载
+        const newFileName = await fillTemplate(result1, result2, templateFile);
+        log(`处理完成，已生成文件: ${newFileName}`);
     } catch (error) {
         log(`错误: ${error.message}`);
     }
 }
 
-//listener
+// 修改事件监听器
 document.getElementById('processButton').addEventListener('click', async () => {
     const customersFile = document.getElementById('customersFile').files[0];
     const invoicesFile = document.getElementById('invoicesFile').files[0];
     const itemsFile = document.getElementById('itemsFile').files[0];
+    const templateFile = document.getElementById('templateFile').files[0];
 
-    if (customersFile && invoicesFile && itemsFile) {
-        await handleFiles(customersFile, invoicesFile, itemsFile);
+    if (customersFile && invoicesFile && itemsFile && templateFile) {
+        await handleFiles(customersFile, invoicesFile, itemsFile, templateFile);
     } else {
         alert('请上传所有必要的文件');
     }
