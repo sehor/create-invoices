@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,12 +8,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-<script src="exceljs.js"></script>
-<script src="data-storage.js"></script>
-<script src="data-processor.js"></script>
-<script src="io-processor.js"></script>
-<script src="invoice-processor.js"></script>
+
 <body>
+    <nav id="navigation"></nav>
     <div class="container">
         <h1>发票处理器</h1>
         <div class="file-input">
@@ -54,9 +52,7 @@
         </div>
         <button id="processButton">转换并下载</button>
         <div style="text-align: right; margin: 1rem 0;">
-            <a href="test.html" 
-               target="_blank" 
-               style="color: var(--secondary-color); 
+            <a href="test.html" target="_blank" style="color: var(--secondary-color); 
                       text-decoration: none; 
                       font-size: 0.9rem;
                       padding: 0.5rem 1rem;
@@ -65,13 +61,39 @@
                 运行测试
             </a>
         </div>
-        <div id="log"></div>
+        <div id="log-container" style="margin-top: 20px;">
+            <h3>处理日志</h3>
+            <div id="log" style="
+                height: 200px;
+                overflow-y: auto;
+                border: 1px solid #ccc;
+                padding: 10px;
+                background-color: #f9f9f9;
+                font-family: monospace;
+                font-size: 0.9em;
+            "></div>
+        </div>
+        <div id="vue-chatbot-container">
+            <vue-chatbot></vue-chatbot>
+        </div>
     </div>
 
-
+    <script src="exceljs.js"></script>
+    <script src="data-storage.js"></script>
+    <script src="data-processor.js"></script>
+    <script src="io-processor.js"></script>
+    <script src="invoice-processor.js"></script>
+    <!-- Plain HTML -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="./dist/vue-chatbot.umd.js"></script>
     <script>
-    // 在这里粘贴您的JavaScript代码
-    // ...
+        // Create a new Vue application just for the chatbot
+        const chatbotApp = Vue.createApp({})
+        chatbotApp.component('vue-chatbot', VueChatbot)
+        // Mount only to the chatbot container
+        chatbotApp.mount('#vue-chatbot-container')
     </script>
+
 </body>
+
 </html>

@@ -50,10 +50,8 @@ class DataStorage {
     static async saveTemplateFile(file) {
         try {
             const buffer = await file.arrayBuffer();
-            const base64 = btoa(
-                new Uint8Array(buffer)
-                    .reduce((data, byte) => data + String.fromCharCode(byte), '')
-            );
+            const base64 = btoa(String.fromCharCode.apply(null, 
+                new Uint8Array(buffer)));
             
             const templateInfo = {
                 name: file.name,
@@ -75,14 +73,22 @@ class DataStorage {
             if (!templateInfo) return null;
             
             const { name, type, data } = JSON.parse(templateInfo);
-            const binaryString = atob(data);
-            const bytes = new Uint8Array(binaryString.length);
             
-            for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
+            if (!data) return null;
+            
+            try {
+                const binaryString = atob(data);
+                const bytes = new Uint8Array(binaryString.length);
+                
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                
+                return new File([bytes.buffer], name, { type });
+            } catch (e) {
+                console.error('Base64解码失败:', e);
+                return null;
             }
-            
-            return new File([bytes.buffer], name, { type });
         } catch (error) {
             console.error('获取模板文件失败:', error);
             return null;

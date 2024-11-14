@@ -34,6 +34,9 @@ const generateResult1Entry = (invoiceNumber, matchedCustomer) => {
         "是否展示销售方地址电话银行账号": "",
         "购买方邮箱": "",
         "购买方经办人姓名": "",
+        "购买方经办人证件类型": "",
+        "购买方经办人证件号码": "",
+        "经办人国籍(地区)": "",
         "经办人自然人纳税人识别号": "",
         "放弃享受减按1%征收率原因": "",
         "收款人": "张宗兵",
@@ -46,8 +49,10 @@ const generateResult2Entry = (invoiceNumber, invoice, itemInfo) => {
     const amount = typeof invoice['数量'] != 'string' ?
     invoice['数量'] :
     invoice['数量'].replace(/,/g, '');
-    const price = invoice['单价'];
-    const total = (parseFloat(amount) * parseFloat(price)).toFixed(2);
+    //convert amout and price to float
+     amount = parseFloat(invoice['数量']);
+    const price = parseFloat(invoice['单价']);
+    const total = (amount * price).toFixed(2);
 
     return {
         "发票流水号": invoiceNumber,
