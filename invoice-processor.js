@@ -44,7 +44,7 @@ async function saveCustomersData() {
     }
 
     try {
-        customersData = await IOProcessor.readExcelFile(file);
+        customersData = await readExcelFile(file);
         if (DataStorage.saveCustomersData(customersData)) {
             alert('客户数据保存成功！');
             updateStatus();
@@ -309,7 +309,7 @@ async function handleFiles(customersFile, invoicesFile, itemsFile, templateFileI
 
         log('数据处理完成，开始生成文件...');
 
-        // 使用实际的模板文件���优先使用新上传的，否则使用存储的）
+        // 使用实际的模板文件优先使用新上传的，否则使用存储的）
         const finalTemplateFile = templateFileInput || templateFile;
         if (!finalTemplateFile) {
             throw new Error('未找到模板文件');
@@ -362,7 +362,11 @@ async function handleProcessButtonClick() {
 
 function log(message) {
     const logElement = document.getElementById('log');
-    logElement.innerHTML += message + '<br>';
+    if (logElement) {
+        const timestamp = new Date().toLocaleTimeString();
+        logElement.innerHTML += `[${timestamp}] ${message}<br>`;
+        logElement.scrollTop = logElement.scrollHeight;
+    }
     console.log(message);
 }
 
