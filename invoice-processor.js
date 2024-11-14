@@ -1,6 +1,7 @@
 let customersData = null;
 let itemsData = null;
-let templateFile = null;
+let invoiceTemplateFile = null;
+let itemsTemplateFile = null;
 let isProcessing = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -8,17 +9,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 加载保存的数据
         customersData = DataStorage.getCustomersData();
         itemsData = DataStorage.getItemsData();
-        templateFile = await DataStorage.getTemplateFile();
+        invoiceTemplateFile = await DataStorage.getTemplateFile('invoice');
+        itemsTemplateFile = await DataStorage.getTemplateFile('items');
 
         updateStatus();
 
         // 添加事件监听器
         document.getElementById('saveCustomersData').addEventListener('click', saveCustomersData);
         document.getElementById('saveItemsData').addEventListener('click', saveItemsData);
-        document.getElementById('saveTemplateFile').addEventListener('click', saveTemplateFile);
-        document.getElementById('clearCustomersData').addEventListener('click', clearCustomersData);
-        document.getElementById('clearItemsData').addEventListener('click', clearItemsData);
-        document.getElementById('clearTemplateFile').addEventListener('click', clearTemplateFile);
+        document.getElementById('saveInvoiceTemplate').addEventListener('click', () => saveTemplateFile('invoice'));
+        document.getElementById('saveItemsTemplate').addEventListener('click', () => saveTemplateFile('items'));
+        document.getElementById('clearInvoiceTemplate').addEventListener('click', () => clearTemplateFile('invoice'));
+        document.getElementById('clearItemsTemplate').addEventListener('click', () => clearTemplateFile('items'));
         document.getElementById('processButton').addEventListener('click', handleProcessButtonClick);
     } catch (error) {
         console.error('初始化失败:', error);
@@ -29,11 +31,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 function updateStatus() {
     const customersStatus = document.getElementById('customersStatus');
     const itemsStatus = document.getElementById('itemsStatus');
-    const templateStatus = document.getElementById('templateStatus');
+    const invoiceTemplateStatus = document.getElementById('invoiceTemplateStatus');
+    const itemsTemplateStatus = document.getElementById('itemsTemplateStatus');
 
     customersStatus.textContent = customersData ? '已加载客户数据' : '无存储数据';
     itemsStatus.textContent = itemsData ? '已加载项目数据' : '无存储数据';
-    templateStatus.textContent = templateFile ? `已加载模板: ${templateFile.name}` : '无存储模板';
+    invoiceTemplateStatus.textContent = invoiceTemplateFile ? 
+        `已加载模板: ${invoiceTemplateFile.name}` : '无存储模板';
+    itemsTemplateStatus.textContent = itemsTemplateFile ? 
+        `已加载模板: ${itemsTemplateFile.name}` : '无存储模板';
 }
 
 async function saveCustomersData() {
@@ -196,73 +202,113 @@ async function readExcelFile(file, sheetName = null, rowRange = null) {
     return jsonData;
 }
 
-// 修改downloadExcel函数为fillTemplate函数
-async function fillTemplate(result1, result2, templateFile) {
+// 修改fillTemplate函数
+async function fillTemplate(invoiceInfo, invoiceItems, invoiceTemplateFile, itemsTemplateFile) {
     try {
-        const fillSheet = (worksheet, result, startRow) => {
-            const headers = Object.keys(result[0]);
-            result.forEach((rowData, index) => {
-                const rowNumber = index + startRow;
-                const row = worksheet.getRow(rowNumber);
-                headers.forEach((key, colIndex) => {
-                    const value = rowData[key];
-                    row.getCell(colIndex + 1).value = value;
-                    if (typeof value === 'number') {
-                        row.getCell(colIndex + 1).numFmt = '#,##0.00';
+        const fillSheet = (worksheet, data, startRow) => {
+            log(`开始填充数据，起始行: ${startRow}`);
+            
+            // 1. 首先复制模板中的所有公式
+            const formulaCells = [];
+            worksheet.eachRow((row, rowNumber) => {
+                row.eachCell((cell, colNumber) => {
+                    if (cell.formula) {
+                        formulaCells.push({
+                            row: rowNumber,
+                            col: colNumber,
+                            formula: cell.formula
+                        });
                     }
                 });
+            });
+            
+            // 2. 填充数据
+            const headers = Object.keys(data[0]);
+            data.forEach((rowData, index) => {
+                const rowNumber = index + startRow;
+                const row = worksheet.getRow(rowNumber);
+                
+                // 清除目标行的所有内容和公式
+                row.eachCell((cell) => {
+                    cell.value = null;
+                    cell.formula = null;
+                });
+                
+                // 填充数据
+                headers.forEach((key, colIndex) => {
+                    const cell = row.getCell(colIndex + 1);
+                    const value = rowData[key];
+                    
+                    // 设置单元格值
+                    if (typeof value === 'number') {
+                        cell.value = value;   
+                    } else {
+                        cell.value = value;
+                    }
+                });
+                
+                // 提交行的更改
                 row.commit();
-                log(`写入第一个文件第 ${rowNumber} 行，流水号: ${rowData['发票流水号']}`);
             });
-        }
-        const downloadFile = async (workbook, fileName) => {
-            const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], {
-                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            
+            // 3. 重新应用公式（如果需要）
+            formulaCells.forEach(({row, col, formula}) => {
+                if (row >= startRow) {
+                    const targetRow = worksheet.getRow(row);
+                    const cell = targetRow.getCell(col);
+                    try {
+                        cell.formula = formula;
+                        targetRow.commit();
+                    } catch (e) {
+                        log(`警告：无法在单元格 ${col}${row} 应用公式: ${e.message}`);
+                    }
+                }
             });
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = fileName;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
         }
 
-        log('开始填充模板...');
-        // 处理第一个文件（result1）
+        // 处理开票信息表
         log('正在处理开票信息表...');
         const workbook1 = new ExcelJS.Workbook();
-        await workbook1.xlsx.load(templateFile);
+        await workbook1.xlsx.load(invoiceTemplateFile);
         const worksheet1 = workbook1.worksheets[0];
+        
+        // 在填充数据前先解除所有共享公式
+        worksheet1.eachRow((row) => {
+            row.eachCell((cell) => {
+                if (cell.sharedFormula) {
+                    cell.sharedFormula = undefined;
+                }
+            });
+            row.commit();
+        });
+        
+        fillSheet(worksheet1, invoiceInfo, 4);
 
-        log(`开始填充第一个文件的数据，数据条数：${result1.length}`);
-        fillSheet(worksheet1, result1, 4);
-        log('第一个文件填充完成');
-
+        // 处理商品明细表
         log('正在处理商品明细表...');
         const workbook2 = new ExcelJS.Workbook();
-        await workbook2.xlsx.load(templateFile);
+        await workbook2.xlsx.load(itemsTemplateFile);
         const worksheet2 = workbook2.worksheets[0];
-        log('开始填充第二个文件的数据，数据条数：${result2.length}');
-        fillSheet(worksheet2, result2, 4);
-        log('第二个文件填充完成');
+        
+        // 在填充数据前先解除所有共享公式
+        worksheet2.eachRow((row) => {
+            row.eachCell((cell) => {
+                if (cell.sharedFormula) {
+                    cell.sharedFormula = undefined;
+                }
+            });
+            row.commit();
+        });
+        
+        fillSheet(worksheet2, invoiceItems, 4);
 
-
-        // 生成带日期的文件名
+        // 生成文件名并下载
         const date = new Date();
         const dateStr = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
-        const originalName = templateFile.name.replace('.xlsx', '');
 
-        // 导出第一个文件
-        await downloadFile(workbook1, `${originalName}_开票信息_${dateStr}.xlsx`);
-        log(`第一个文件导出完成: ${originalName}_开票信息_${dateStr}.xlsx`);
-
-      
-        // 导出第二个文件
-        await downloadFile(workbook2, `${originalName}_商品明细_${dateStr}.xlsx`);
-        log(`第二个文件导出完成: ${originalName}_商品明细_${dateStr}.xlsx`);
+        // 下载两个文件
+        await downloadWorkbook(workbook1, `开票信息_${dateStr}.xlsx`);
+        await downloadWorkbook(workbook2, `商品明细_${dateStr}.xlsx`);
 
     } catch (error) {
         const errorMsg = `填充模板失败: ${error.message}`;
@@ -271,8 +317,25 @@ async function fillTemplate(result1, result2, templateFile) {
     }
 }
 
-// 修改 handleFiles 函数，添加默认行范围和加载状态
-async function handleFiles(customersFile, invoicesFile, itemsFile, templateFileInput) {
+// 添加下载工作簿的辅助函数
+async function downloadWorkbook(workbook, fileName) {
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    log(`文件 ${fileName} 已导出`);
+}
+
+// 修改handleFiles函数
+async function handleFiles(customersFile, invoicesFile, itemsFile, invoiceTemplateInput, itemsTemplateInput) {
     if (isProcessing) {
         alert('正在处理中，请稍候...');
         return;
@@ -309,13 +372,15 @@ async function handleFiles(customersFile, invoicesFile, itemsFile, templateFileI
 
         log('数据处理完成，开始生成文件...');
 
-        // 使用实际的模板文件优先使用新上传的，否则使用存储的）
-        const finalTemplateFile = templateFileInput || templateFile;
-        if (!finalTemplateFile) {
-            throw new Error('未找到模板文件');
+        // 使用实际的模板文件（优先使用新上传的，否则使用存储的）
+        const finalInvoiceTemplate = invoiceTemplateInput || invoiceTemplateFile;
+        const finalItemsTemplate = itemsTemplateInput || itemsTemplateFile;
+        
+        if (!finalInvoiceTemplate || !finalItemsTemplate) {
+            throw new Error('请确保两个模板文件都已上传或已存储');
         }
 
-        await fillTemplate(result1, result2, finalTemplateFile);
+        await fillTemplate(result1, result2, finalInvoiceTemplate, finalItemsTemplate);
 
         log('处理完成！');
     } catch (error) {
@@ -328,12 +393,13 @@ async function handleFiles(customersFile, invoicesFile, itemsFile, templateFileI
     }
 }
 
-// 保持 handleProcessButtonClick 函数作为主要的处理入口
+// 修改handleProcessButtonClick函数
 async function handleProcessButtonClick() {
     const customersFile = document.getElementById('customersFile').files[0];
     const invoicesFile = document.getElementById('invoicesFile').files[0];
     const itemsFile = document.getElementById('itemsFile').files[0];
-    const templateFileInput = document.getElementById('templateFile').files[0];
+    const invoiceTemplateInput = document.getElementById('invoiceTemplateFile').files[0];
+    const itemsTemplateInput = document.getElementById('itemsTemplateFile').files[0];
 
     if (!invoicesFile) {
         alert('请上传开票信息文件');
@@ -350,12 +416,14 @@ async function handleProcessButtonClick() {
         return;
     }
 
-    if (!templateFile && !templateFileInput) {
-        alert('请上传模板文件或确保已有存储的模板');
+    if ((!invoiceTemplateFile && !invoiceTemplateInput) || 
+        (!itemsTemplateFile && !itemsTemplateInput)) {
+        alert('请确保两个模板文件都已上传或已存储');
         return;
     }
 
-    await handleFiles(customersFile, invoicesFile, itemsFile, templateFileInput);
+    await handleFiles(customersFile, invoicesFile, itemsFile, 
+        invoiceTemplateInput, itemsTemplateInput);
 }
 
 //log
@@ -371,18 +439,23 @@ function log(message) {
 }
 
 // 模板文件管理函数
-async function saveTemplateFile() {
+async function saveTemplateFile(type) {
     try {
-        const fileInput = document.getElementById('templateFile');
+        const fileId = type === 'items' ? 'itemsTemplateFile' : 'invoiceTemplateFile';
+        const fileInput = document.getElementById(fileId);
         const file = fileInput.files[0];
         if (!file) {
             alert('请先选择模板文件');
             return;
         }
 
-        log('正在保存模板文件...');
-        if (await DataStorage.saveTemplateFile(file)) {
-            templateFile = file;
+        log(`正在保存${type === 'items' ? '商品明细' : '开票信息'}模板文件...`);
+        if (await DataStorage.saveTemplateFile(file, type)) {
+            if (type === 'items') {
+                itemsTemplateFile = file;
+            } else {
+                invoiceTemplateFile = file;
+            }
             alert('模板文件保存成功！');
             updateStatus();
             log('模板文件保存成功');
@@ -396,16 +469,21 @@ async function saveTemplateFile() {
     }
 }
 
-function clearTemplateFile() {
-    if (confirm('确定要清除保存的模板文件吗？')) {
+function clearTemplateFile(type) {
+    const templateType = type === 'items' ? '商品明细' : '开票信息';
+    if (confirm(`确定要清除保存的${templateType}模板文件吗？`)) {
         try {
-            DataStorage.clearTemplateFile();
-            templateFile = null;
+            DataStorage.clearTemplateFile(type);
+            if (type === 'items') {
+                itemsTemplateFile = null;
+            } else {
+                invoiceTemplateFile = null;
+            }
             updateStatus();
-            log('模板文件已清除');
-            alert('模板文件已清除');
+            log(`${templateType}模板文件已清除`);
+            alert(`${templateType}模板文件已清除`);
         } catch (error) {
-            const errorMsg = '清除模板文件失败：' + error.message;
+            const errorMsg = `清除${templateType}模板文件失败：` + error.message;
             alert(errorMsg);
             log(errorMsg);
         }
