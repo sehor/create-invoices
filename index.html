@@ -42,12 +42,21 @@
             </div>
         </div>
         <div class="file-input">
-            <label for="templateFile">批量发票模板：</label>
-            <input type="file" id="templateFile" accept=".xlsx,.xls">
+            <label for="invoiceTemplateFile">开票信息模板：</label>
+            <input type="file" id="invoiceTemplateFile" accept=".xlsx,.xls">
             <div class="data-management">
-                <button id="saveTemplateFile" class="secondary-button">保存模板</button>
-                <button id="clearTemplateFile" class="secondary-button">清除模板</button>
-                <span id="templateStatus" class="status-text"></span>
+                <button id="saveInvoiceTemplate" class="secondary-button">保存模板</button>
+                <button id="clearInvoiceTemplate" class="secondary-button">清除模板</button>
+                <span id="invoiceTemplateStatus" class="status-text"></span>
+            </div>
+        </div>
+        <div class="file-input">
+            <label for="itemsTemplateFile">开票项目明细模板：</label>
+            <input type="file" id="itemsTemplateFile" accept=".xlsx,.xls">
+            <div class="data-management">
+                <button id="saveItemsTemplate" class="secondary-button">保存模板</button>
+                <button id="clearItemsTemplate" class="secondary-button">清除模板</button>
+                <span id="itemsTemplateStatus" class="status-text"></span>
             </div>
         </div>
         <button id="processButton">转换并下载</button>

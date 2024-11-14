@@ -47,7 +47,7 @@ class DataStorage {
         localStorage.removeItem('itemsData');
     }
 
-    static async saveTemplateFile(file) {
+    static async saveTemplateFile(file, type) {
         try {
             const buffer = await file.arrayBuffer();
             const base64 = btoa(String.fromCharCode.apply(null, 
@@ -59,7 +59,8 @@ class DataStorage {
                 data: base64
             };
             
-            localStorage.setItem('templateFile', JSON.stringify(templateInfo));
+            const key = type === 'items' ? 'itemsTemplateFile' : 'invoiceTemplateFile';
+            localStorage.setItem(key, JSON.stringify(templateInfo));
             return true;
         } catch (error) {
             console.error('保存模板文件失败:', error);
@@ -67,12 +68,13 @@ class DataStorage {
         }
     }
 
-    static async getTemplateFile() {
+    static async getTemplateFile(type) {
         try {
-            const templateInfo = localStorage.getItem('templateFile');
+            const key = type === 'items' ? 'itemsTemplateFile' : 'invoiceTemplateFile';
+            const templateInfo = localStorage.getItem(key);
             if (!templateInfo) return null;
             
-            const { name, type, data } = JSON.parse(templateInfo);
+            const { name, type: fileType, data } = JSON.parse(templateInfo);
             
             if (!data) return null;
             
@@ -84,7 +86,7 @@ class DataStorage {
                     bytes[i] = binaryString.charCodeAt(i);
                 }
                 
-                return new File([bytes.buffer], name, { type });
+                return new File([bytes.buffer], name, { type: fileType });
             } catch (e) {
                 console.error('Base64解码失败:', e);
                 return null;
@@ -95,7 +97,8 @@ class DataStorage {
         }
     }
 
-    static clearTemplateFile() {
-        localStorage.removeItem('templateFile');
+    static clearTemplateFile(type) {
+        const key = type === 'items' ? 'itemsTemplateFile' : 'invoiceTemplateFile';
+        localStorage.removeItem(key);
     }
 } 
