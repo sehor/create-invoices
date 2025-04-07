@@ -167,7 +167,9 @@ async function readExcelFile(file, sheetName = null, rowRange = null) {
     const headerRow = worksheet.getRow(1);
     headers = headerRow.values;
 
- 
+    // 记录上一个有效的客户名称
+    let lastCustomerName = '';
+
     // 读取指定范围内的数据
     for (let rowNumber = startRow; rowNumber <= endRow; rowNumber++) {
         const row = worksheet.getRow(rowNumber);
@@ -175,23 +177,28 @@ async function readExcelFile(file, sheetName = null, rowRange = null) {
             const rowData = {};
             row.eachCell({ includeEmpty: true }, function (cell, colNumber) {
                 const header = headers[colNumber];
-                const cellValue = cell.value;
-                console.log( {cellValue})
                 if (header) {
-                    if (header === '公司名称') {
-                        rowData[header] = (cellValue && cellValue.trim()) ? cellValue.trim() : '';
+                    if (header === '购方名称') {
+                        const cellValue = cell.value;
+                        rowData[header] = (cellValue && cellValue.trim()) ? cellValue.trim() : lastCustomerName;
+                        if (cellValue && cellValue.trim()) {
+                            lastCustomerName = cellValue.trim();
+                        }
                     } else {
                         rowData[header] = cell.value;
                     }
                 }
             });
 
+            if (!rowData['购方名称']) {
+                rowData['购方名称'] = lastCustomerName;
+            }
+
             jsonData.push(rowData);
         }
     }
 
     log(`成功读取 ${jsonData.length} 条数据`);
-    console.log({jsonData})
     return jsonData;
 }
 

@@ -25,9 +25,12 @@ const generateResult1Entry = (invoiceNumber, matchedCustomer) => {
         "购买方银行账号": matchedCustomer['银行账号'] || '',
         "备注": "",
         "报废产品销售类型": "",
-        "是否展示购买方地址电话银行账号": "",
+        "每千克煤炭发热量": "",
+        "干基全硫": "",
+        "干燥无灰基挥发分": "",
         "销售方开户行": "",
         "销售方银行账号": "",
+        "是否展示购买方地址电话银行账号": "",
         "是否展示销售方地址电话银行账号": "",
         "购买方邮箱": "",
         "购买方经办人姓名": "",
@@ -96,7 +99,7 @@ const generateResult2Entry = (invoiceNumber, invoice, itemInfo) => {
     }
 }
 
-function processInvoiceData(customersData, invoicesData, itemsData) {
+function processInvoiceData(customersData, invoicesData, itemsData,useMergedCells=true) {
     const result1 = [];
     const result2 = [];
     const processedCustomers = new Set();  // 用于跟踪已处理的客户
@@ -105,22 +108,97 @@ function processInvoiceData(customersData, invoicesData, itemsData) {
 
     // 按客户名称分组处理发票数据
     const invoiceGroups = {};
-    invoicesData.forEach(invoice => {
-        const shortName = invoice['公司名称'];
-        if (!invoiceGroups[shortName]) {
-            invoiceGroups[shortName] = [];
-        }
-        invoiceGroups[shortName].push(invoice);
-    });
+    let lastValidName = '';
+    let currentGroupId = 0;
+   
+     console.log({invoicesData});
+  
+    if(useMergedCells){
+        // 公司名称+备注来分组
+        invoicesData.forEach(invoice => {
+            const shortName = invoice['公司名称'] ? invoice['公司名称'].split(' ')[0] : '';
+            const remark = invoice['备注'] || '';
+            // 使用公司名称+备注作为分组依据
+            const groupIdentifier = `${shortName}_${remark}`;
+            
+            if (shortName !== '') {
+                // 检查是否已存在相同公司名称和备注的组
+                let existingGroupKey = null;
+                for (const [key, group] of Object.entries(invoiceGroups)) {
+                    if (group.identifier === groupIdentifier) {
+                        existingGroupKey = key;
+                        break;
+                    }
+                }
+                
+                if (existingGroupKey) {
+                    // 如果已存在相同标识的组，添加到该组
+                    invoiceGroups[existingGroupKey].invoices.push(invoice);
+                    lastValidName = existingGroupKey;
+                } else {
+                    // 创建新组
+                    currentGroupId++;
+                    const groupKey = `group_${currentGroupId}`;
+                    invoiceGroups[groupKey] = {
+                        name: shortName,
+                        identifier: groupIdentifier,
+                        invoices: [invoice]
+                    };
+                    lastValidName = groupKey;
+                }
+            } else if (lastValidName !== '') {
+                // 空名称时，添加到当前组
+                invoiceGroups[lastValidName].invoices.push(invoice);
+            }
+        });
+        console.log({invoiceGroups});
+    } else {
+        // 按公司名称来分组
+        // 先填充空白名称
+        invoicesData.forEach(invoice => {
+            const shortName = invoice['公司名称'] ? invoice['公司名称'].split(' ')[0] : '';
+            if (shortName !== '') {
+                lastValidName = shortName;     
+            } else {
+                invoice['公司名称'] = lastValidName;
+            }
+        });
+        
+        // 分组
+        invoicesData.forEach(invoice => {
+            const shortName = invoice['公司名称'] ? invoice['公司名称'].split(' ')[0] : '';
+            if (!invoiceGroups[shortName]) {
+                invoiceGroups[shortName] = [];
+            }
+            invoiceGroups[shortName].push(invoice);
+        });
+    }
+
+
+
 
     // 处理每个客户组
-    Object.entries(invoiceGroups).forEach(([shortName, invoices]) => {
+    Object.entries(invoiceGroups).forEach(([groupKey, group]) => {
+        const shortName = group.name;
+        const invoices = group.invoices;
+        
         console.log(`处理客户 "${shortName}" 的发票，共 ${invoices.length} 条`);
         
         // 查找匹配的客户信息
-        const matchedCustomer = customersData.find(customer => 
+        const matchedCustomers = customersData.filter(customer => 
             customer['客户名称'].includes(shortName)
-        ) || { '客户名称': shortName };
+        );
+        
+        // 检查是否匹配到多个客户
+        if (matchedCustomers.length > 1) {
+            const customerNames = matchedCustomers.map(c => c['客户名称']).join(', ');
+            const errorMsg = `警告：客户名称 "${shortName}" 匹配到多个客户: ${customerNames}，请修改客户名称使其唯一`;
+            console.error(errorMsg);
+            throw new Error(errorMsg);
+        }
+        
+        // 获取匹配的客户或使用默认值
+        const matchedCustomer = matchedCustomers[0] || { '客户名称': shortName };
 
         console.log(`找到匹配客户: ${matchedCustomer['客户名称']}`);
 
