@@ -99,20 +99,42 @@ const generateResult2Entry = (invoiceNumber, invoice, itemInfo) => {
     }
 }
 
-function processInvoiceData(customersData, invoicesData, itemsData,useMergedCells=true) {
+function processInvoiceData(customersData, invoicesData, itemsData, useMergedCells=false) {
+    // 检查输入数据是否有效
+    if (!customersData || !Array.isArray(customersData)) {
+        throw new Error('客户数据无效或为空');
+    }
+    
+    if (!invoicesData || !Array.isArray(invoicesData)) {
+        throw new Error('发票数据无效或为空');
+    }
+    
+    if (!itemsData) {
+        console.warn('项目数据为空，将使用默认税率');
+        itemsData = [];
+    }
+
+    // 确保 itemsData 是数组
+    if (!Array.isArray(itemsData)) {
+        console.warn('项目数据不是数组，将转换为空数组并使用默认税率');
+        itemsData = [];
+    }
+
     const result1 = [];
     const result2 = [];
-    const processedCustomers = new Set();  // 用于跟踪已处理的客户
+    
+    // 移除这个可能导致问题的变量，因为它没有被使用
+    // const processedCustomers = new Set();
 
-    console.log(`开始处理发票数据，客户数据共 ${customersData.length} 条`);
+    console.log(`开始处理发票数据，客户数据共 ${customersData.length} 条，发票数据共 ${invoicesData.length} 条，项目数据共 ${itemsData.length} 条`);
 
     // 按客户名称分组处理发票数据
     const invoiceGroups = {};
     let lastValidName = '';
     let currentGroupId = 0;
    
-     console.log({invoicesData});
-  
+    console.log({invoicesData});
+    
     if(useMergedCells){
         // 公司名称+备注来分组
         invoicesData.forEach(invoice => {
@@ -164,13 +186,35 @@ function processInvoiceData(customersData, invoicesData, itemsData,useMergedCell
             }
         });
         
-        // 分组
+        // 分组，使用与useMergedCells=true相同的数据结构
         invoicesData.forEach(invoice => {
             const shortName = invoice['公司名称'] ? invoice['公司名称'].split(' ')[0] : '';
-            if (!invoiceGroups[shortName]) {
-                invoiceGroups[shortName] = [];
+            if (shortName === '') {
+                return; // 如果公司名称为空则跳过当前记录
             }
-            invoiceGroups[shortName].push(invoice);
+            
+            // 检查是否已存在该公司名称的组
+            let existingGroupKey = null;
+            for (const [key, group] of Object.entries(invoiceGroups)) {
+                if (group.name === shortName) {
+                    existingGroupKey = key;
+                    break;
+                }
+            }
+            
+            if (existingGroupKey) {
+                // 如果已存在该公司名称的组，添加到该组
+                invoiceGroups[existingGroupKey].invoices.push(invoice);
+            } else {
+                // 创建新组
+                currentGroupId++;
+                const groupKey = `group_${currentGroupId}`;
+                invoiceGroups[groupKey] = {
+                    name: shortName,
+                    identifier: shortName, // 不使用备注作为标识符
+                    invoices: [invoice]
+                };
+            }
         });
     }
 
