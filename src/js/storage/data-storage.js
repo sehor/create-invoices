@@ -101,4 +101,4 @@ class DataStorage {
         const key = type === 'items' ? 'itemsTemplateFile' : 'invoiceTemplateFile';
         localStorage.removeItem(key);
     }
-} 
+}

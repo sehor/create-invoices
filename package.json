@@ -1,15 +1,20 @@
 {
   "name": "create-invoices",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "发票处理器 - 用于处理Excel发票数据的Web应用",
+  "main": "public/index.html",
   "scripts": {
+    "start": "npx http-server public -p 8080 -o",
+    "dev": "npx http-server . -p 8080 -o",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": ["invoice", "excel", "data-processing", "web-app"],
   "author": "",
   "license": "ISC",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
   "dependencies": {
-    "create-invoices": "file:"
+    "exceljs": "^4.3.0"
   }
 }
