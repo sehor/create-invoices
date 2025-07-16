@@ -145,6 +145,21 @@ async function readExcelFile(file, sheetName = null, rowRange = null) {
         throw new Error(`找不到工作表: ${sheetName || '默认工作表'}`);
     }
 
+    // 获取单元格的实际值（处理公式单元格）
+    const getCellValue = (cell) => {
+        if (!cell.value) {
+            return null;
+        }
+        
+        // 如果是公式单元格，返回计算结果
+        if (typeof cell.value === 'object' && cell.value.formula) {
+            return cell.value.result !== undefined ? cell.value.result : cell.value;
+        }
+        
+        // 普通单元格直接返回值
+        return cell.value;
+    };
+
     const jsonData = [];
     let headers = [];
 
@@ -175,13 +190,13 @@ async function readExcelFile(file, sheetName = null, rowRange = null) {
             const rowData = {};
             row.eachCell({ includeEmpty: true }, function (cell, colNumber) {
                 const header = headers[colNumber];
-                const cellValue = cell.value;
+                const cellValue = getCellValue(cell);
                 console.log( {cellValue})
                 if (header) {
                     if (header === '公司名称') {
-                        rowData[header] = (cellValue && cellValue.trim()) ? cellValue.trim() : '';
+                        rowData[header] = (cellValue && cellValue.toString().trim()) ? cellValue.toString().trim() : '';
                     } else {
-                        rowData[header] = cell.value;
+                        rowData[header] = cellValue;
                     }
                 }
             });
