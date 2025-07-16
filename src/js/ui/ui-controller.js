@@ -18,8 +18,6 @@ class UIController {
             customersFile: document.getElementById('customersFile'),
             itemsFile: document.getElementById('itemsFile'),
             invoicesFile: document.getElementById('invoicesFile'),
-            invoiceTemplateFile: document.getElementById('invoiceTemplateFile'),
-            itemsTemplateFile: document.getElementById('itemsTemplateFile'),
             
             // 工作表配置
             sheetName: document.getElementById('sheetName'),
@@ -28,19 +26,13 @@ class UIController {
             // 按钮
             saveCustomersData: document.getElementById('saveCustomersData'),
             saveItemsData: document.getElementById('saveItemsData'),
-            saveInvoiceTemplate: document.getElementById('saveInvoiceTemplate'),
-            saveItemsTemplate: document.getElementById('saveItemsTemplate'),
             clearCustomersData: document.getElementById('clearCustomersData'),
             clearItemsData: document.getElementById('clearItemsData'),
-            clearInvoiceTemplate: document.getElementById('clearInvoiceTemplate'),
-            clearItemsTemplate: document.getElementById('clearItemsTemplate'),
             processButton: document.getElementById('processButton'),
             
             // 状态显示
             customersStatus: document.getElementById('customersStatus'),
-            itemsStatus: document.getElementById('itemsStatus'),
-            invoiceTemplateStatus: document.getElementById('invoiceTemplateStatus'),
-            itemsTemplateStatus: document.getElementById('itemsTemplateStatus')
+            itemsStatus: document.getElementById('itemsStatus')
         };
     }
 
@@ -51,14 +43,10 @@ class UIController {
         // 保存数据按钮
         this.elements.saveCustomersData?.addEventListener('click', () => this.handleSaveCustomersData());
         this.elements.saveItemsData?.addEventListener('click', () => this.handleSaveItemsData());
-        this.elements.saveInvoiceTemplate?.addEventListener('click', () => this.handleSaveTemplate('invoice'));
-        this.elements.saveItemsTemplate?.addEventListener('click', () => this.handleSaveTemplate('items'));
         
         // 清除数据按钮
         this.elements.clearCustomersData?.addEventListener('click', () => this.handleClearData('customers'));
         this.elements.clearItemsData?.addEventListener('click', () => this.handleClearData('items'));
-        this.elements.clearInvoiceTemplate?.addEventListener('click', () => this.handleClearData('invoiceTemplate'));
-        this.elements.clearItemsTemplate?.addEventListener('click', () => this.handleClearData('itemsTemplate'));
         
         // 处理按钮
         this.elements.processButton?.addEventListener('click', () => this.handleProcessFiles());
@@ -116,37 +104,12 @@ class UIController {
     }
 
     /**
-     * 处理保存模板文件
-     */
-    async handleSaveTemplate(type) {
-        const fileInput = type === 'invoice' ? 
-            this.elements.invoiceTemplateFile : 
-            this.elements.itemsTemplateFile;
-        
-        const file = fileInput?.files[0];
-        if (!file) {
-            alert('请先选择模板文件');
-            return;
-        }
-
-        try {
-            await this.processor.saveTemplateFile(file, type);
-            alert('模板文件保存成功！');
-            this.updateStatus();
-        } catch (error) {
-            alert(error.message);
-        }
-    }
-
-    /**
      * 处理清除数据
      */
     handleClearData(type) {
         const confirmMessages = {
             customers: '确定要清除保存的客户数据吗？',
-            items: '确定要清除保存的项目数据吗？',
-            invoiceTemplate: '确定要清除保存的发票模板吗？',
-            itemsTemplate: '确定要清除保存的项目模板吗？'
+            items: '确定要清除保存的项目数据吗？'
         };
 
         if (confirm(confirmMessages[type])) {
@@ -205,12 +168,6 @@ class UIController {
         }
         if (this.elements.itemsStatus) {
             this.elements.itemsStatus.textContent = status.itemsData;
-        }
-        if (this.elements.invoiceTemplateStatus) {
-            this.elements.invoiceTemplateStatus.textContent = status.invoiceTemplate;
-        }
-        if (this.elements.itemsTemplateStatus) {
-            this.elements.itemsTemplateStatus.textContent = status.itemsTemplate;
         }
     }
 }

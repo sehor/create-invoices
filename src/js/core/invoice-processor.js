@@ -6,8 +6,6 @@ class InvoiceProcessor {
     constructor() {
         this.customersData = null;
         this.itemsData = null;
-        this.invoiceTemplateFile = null;
-        this.itemsTemplateFile = null;
         this.isProcessing = false;
     }
 
@@ -19,8 +17,6 @@ class InvoiceProcessor {
             // 加载保存的数据
             this.customersData = DataStorage.getCustomersData();
             this.itemsData = DataStorage.getItemsData();
-            this.invoiceTemplateFile = await DataStorage.getTemplateFile('invoice');
-            this.itemsTemplateFile = await DataStorage.getTemplateFile('items');
             
             console.log('发票处理器初始化完成');
             return true;
@@ -69,29 +65,6 @@ class InvoiceProcessor {
     }
 
     /**
-     * 保存模板文件
-     */
-    async saveTemplateFile(file, type) {
-        if (!file) {
-            throw new Error('请先选择模板文件');
-        }
-
-        try {
-            if (await DataStorage.saveTemplateFile(file, type)) {
-                if (type === 'invoice') {
-                    this.invoiceTemplateFile = file;
-                } else {
-                    this.itemsTemplateFile = file;
-                }
-                return true;
-            }
-            throw new Error('保存失败');
-        } catch (error) {
-            throw new Error('保存模板文件失败：' + error.message);
-        }
-    }
-
-    /**
      * 清除数据
      */
     clearData(type) {
@@ -103,14 +76,6 @@ class InvoiceProcessor {
             case 'items':
                 DataStorage.clearItemsData();
                 this.itemsData = null;
-                break;
-            case 'invoiceTemplate':
-                DataStorage.clearTemplateFile('invoice');
-                this.invoiceTemplateFile = null;
-                break;
-            case 'itemsTemplate':
-                DataStorage.clearTemplateFile('items');
-                this.itemsTemplateFile = null;
                 break;
         }
     }
@@ -162,10 +127,6 @@ class InvoiceProcessor {
         return {
             customersData: this.customersData ? '已加载客户数据' : '无存储数据',
             itemsData: this.itemsData ? '已加载项目数据' : '无存储数据',
-            invoiceTemplate: this.invoiceTemplateFile ? 
-                `已加载模板: ${this.invoiceTemplateFile.name}` : '无存储模板',
-            itemsTemplate: this.itemsTemplateFile ? 
-                `已加载模板: ${this.itemsTemplateFile.name}` : '无存储模板',
             isProcessing: this.isProcessing
         };
     }

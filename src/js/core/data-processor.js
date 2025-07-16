@@ -240,20 +240,40 @@ class DataProcessor {
     }
 
     /**
+     * 创建新客户对象
+     */
+    static createNewCustomer(customerName) {
+        // 生成唯一ID
+        const customerId = `NEW_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        return {
+            "客户名称": customerName,
+            "公司名称": customerName,
+            "统一社会信用代码/纳税人识别号": "",
+            "地址": "",
+            "电话": "",
+            "开户行名称": "",
+            "银行账号": "",
+            "id": customerId
+        };
+    }
+
+    /**
      * 处理单个发票分组
      */
     static processInvoiceGroup(group, customersData, itemsData, result1, result2) {
         const customerName = group.name;
         
         // 查找匹配的客户
-        const matchedCustomer = customersData.find(customer => {
+        let matchedCustomer = customersData.find(customer => {
             const customerKey = customer['客户名称'] || customer['公司名称'] || '';
             return customerKey.includes(customerName) || customerName.includes(customerKey);
         });
 
+        // 如果找不到匹配的客户，创建新客户
         if (!matchedCustomer) {
-            console.warn(`未找到匹配的客户: ${customerName}`);
-            return;
+            console.warn(`未找到匹配的客户: ${customerName}，创建新客户`);
+            matchedCustomer = this.createNewCustomer(customerName);
         }
 
         // 生成发票号

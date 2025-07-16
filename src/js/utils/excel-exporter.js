@@ -14,30 +14,36 @@ class ExcelExporter {
             const invoiceSheet = workbook.addWorksheet('发票信息');
             if (result1.length > 0) {
                 const headers = Object.keys(result1[0]);
-                invoiceSheet.addRow(headers);
                 
-                result1.forEach(row => {
+                // 在第3行添加表头
+                invoiceSheet.getRow(3).values = headers;
+                
+                // 从第4行开始添加数据
+                result1.forEach((row, index) => {
                     const values = headers.map(header => row[header]);
-                    invoiceSheet.addRow(values);
+                    invoiceSheet.getRow(4 + index).values = values;
                 });
                 
                 // 设置表头样式
-                this.styleHeaders(invoiceSheet, headers.length);
+                this.styleHeaders(invoiceSheet, headers.length, 3);
             }
             
             // 创建发票明细工作表
             const detailSheet = workbook.addWorksheet('发票明细');
             if (result2.length > 0) {
                 const headers = Object.keys(result2[0]);
-                detailSheet.addRow(headers);
                 
-                result2.forEach(row => {
+                // 在第3行添加表头
+                detailSheet.getRow(3).values = headers;
+                
+                // 从第4行开始添加数据
+                result2.forEach((row, index) => {
                     const values = headers.map(header => row[header]);
-                    detailSheet.addRow(values);
+                    detailSheet.getRow(4 + index).values = values;
                 });
                 
                 // 设置表头样式
-                this.styleHeaders(detailSheet, headers.length);
+                this.styleHeaders(detailSheet, headers.length, 3);
             }
             
             // 生成文件并下载
@@ -55,8 +61,8 @@ class ExcelExporter {
     /**
      * 设置表头样式
      */
-    static styleHeaders(worksheet, columnCount) {
-        const headerRow = worksheet.getRow(1);
+    static styleHeaders(worksheet, columnCount, headerRowNumber = 1) {
+        const headerRow = worksheet.getRow(headerRowNumber);
         headerRow.font = { bold: true };
         headerRow.fill = {
             type: 'pattern',
