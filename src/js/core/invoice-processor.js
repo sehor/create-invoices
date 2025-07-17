@@ -125,8 +125,8 @@ class InvoiceProcessor {
      */
     getStatus() {
         return {
-            customersData: this.customersData ? '已加载客户数据' : '无存储数据',
-            itemsData: this.itemsData ? '已加载项目数据' : '无存储数据',
+            customersData: this.customersData ? '已加载数据' : '无存储数据',
+            itemsData: this.itemsData ? '已加载数据' : '无存储数据',
             isProcessing: this.isProcessing
         };
     }

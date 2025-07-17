@@ -115,7 +115,7 @@ h1 {
     padding: var(--spacing-xl);
     border-radius: var(--radius-lg);
     margin-bottom: var(--spacing-xl);
-    border: 2px dashed var(--border-color);
+    border: 2px solid var(--border-color);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
@@ -179,17 +179,18 @@ h1 {
 }
 
 .button {
-    padding: var(--spacing-sm) var(--spacing-lg);
+    padding: var(--spacing-lg) var(--spacing-xl);
     border: none;
-    border-radius: var(--radius-md);
-    font-size: 0.875rem;
+    border-radius: var(--radius-xl);
+    font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 120px;
+    min-width: 140px;
+    min-height: 48px;
     position: relative;
     overflow: hidden;
     text-transform: uppercase;
@@ -222,21 +223,37 @@ h1 {
     box-shadow: var(--shadow-lg);
 }
 
+.secondary-button,
+.danger-button {
+    padding: var(--spacing-xs) var(--spacing-md);
+    border: none;
+    color: var(--white);
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    border-radius: var(--radius-md);
+}
+
 .secondary-button {
-    background: linear-gradient(135deg, var(--secondary-color), var(--secondary-hover));
-    color: white;
-    box-shadow: var(--shadow-md);
+    background: linear-gradient(135deg, var(--secondary-light), var(--secondary-color));
+    color: var(--secondary-hover);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--secondary-color);
 }
 
 .secondary-button:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-md);
 }
 
 .danger-button {
-    background: linear-gradient(135deg, var(--danger-color), var(--danger-hover));
-    color: white;
-    box-shadow: var(--shadow-md);
+    background: linear-gradient(135deg, #fee2e2, var(--danger-color));
+    color: var(--danger-hover);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--danger-color);
 }
 
 .danger-button:hover {
@@ -449,6 +466,10 @@ h1 {
 
     .button {
         width: 100%;
+        padding: var(--spacing-lg) var(--spacing-xl);
+        border-radius: var(--radius-xl);
+        font-size: 1rem;
+        min-height: 48px;
     }
 
     .input-group {
