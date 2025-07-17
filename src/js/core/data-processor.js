@@ -287,7 +287,7 @@ class DataProcessor {
         group.invoices.forEach(invoice => {
             const itemName = invoice['品名'] || '';
             const matchedItem = itemsData.find(item => 
-                item['商品名称'] && item['商品名称'].includes(itemName)
+                item['项目名称'] && item['项目名称'].includes(itemName)
             );
 
             const detailEntry = this.generateInvoiceDetailEntry(invoiceNumber, invoice, matchedItem);
