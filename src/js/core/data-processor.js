@@ -32,7 +32,7 @@ class DataProcessor {
             "购买方地址": matchedCustomer['地址'] || '',
             "买方所在地区（报废产品收购必填）": "",
             "购买方详细地址（报废产品收购必填）": "",
-            "购买电话": matchedCustomer['电话'] || '',
+            "购买方电话": matchedCustomer['电话'] || '',
             "购买方开户银行": matchedCustomer['开户行名称'] || '',
             "购买方银行账号": matchedCustomer['银行账号'] || '',
             "是否展示购买方地址电话银行账号": "",
