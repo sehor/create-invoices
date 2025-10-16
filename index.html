@@ -16,6 +16,18 @@
 </head>
 
 <body>
+    <!-- 简单访问控制覆盖层 -->
+    <div id="auth-overlay" class="auth-overlay" aria-hidden="true">
+        <div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+            <h2 id="auth-title" style="margin-bottom: var(--spacing-md);">访问验证</h2>
+            <p style="color: var(--text-secondary); margin-bottom: var(--spacing-md);">请输入访问密码</p>
+            <input type="password" id="auth-password" class="auth-input" placeholder="输入密码" autocomplete="current-password" />
+            <div class="auth-actions">
+                <button id="auth-submit" class="primary-button"><i class="fas fa-lock"></i> 进入</button>
+            </div>
+            <div id="auth-error" class="status-text" style="margin-top: var(--spacing-sm);"></div>
+        </div>
+    </div>
     <div class="container">
         <h1>生成批量发票数据</h1>
         
@@ -88,6 +100,7 @@
         </div>
     </div>
 
+    <script src="src/js/core/auth.js"></script>
     <script src="exceljs.js"></script>
     <script src="src/js/storage/data-storage.js"></script>
     <script src="src/js/utils/logger.js"></script>
