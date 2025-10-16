@@ -48,6 +48,20 @@
         </div>
 
         <div class="file-input">
+            <label for="templateFile"><i class="fas fa-file"></i> 开票模板文件</label>
+            <input type="file" id="templateFile" accept=".xlsx,.xls">
+            <div class="data-management">
+                <button id="saveTemplate" class="secondary-button">
+                    <i class="fas fa-upload"></i> 上传模板
+                </button>
+                <button id="checkTemplate" class="secondary-button">
+                    <i class="fas fa-clipboard-check"></i> 检测模板
+                </button>
+                <span id="templateStatus" class="status-text"></span>
+            </div>
+        </div>
+
+        <div class="file-input">
             <label for="invoicesFile"><i class="fas fa-file-excel"></i> 开票信息文件</label>
             <input type="file" id="invoicesFile" accept=".xlsx,.xls">
             <div class="input-group">

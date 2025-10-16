@@ -18,6 +18,7 @@ class UIController {
             customersFile: document.getElementById('customersFile'),
             itemsFile: document.getElementById('itemsFile'),
             invoicesFile: document.getElementById('invoicesFile'),
+            templateFile: document.getElementById('templateFile'),
             
             // 工作表配置
             sheetName: document.getElementById('sheetName'),
@@ -26,13 +27,16 @@ class UIController {
             // 按钮
             saveCustomersData: document.getElementById('saveCustomersData'),
             saveItemsData: document.getElementById('saveItemsData'),
+            saveTemplate: document.getElementById('saveTemplate'),
+            checkTemplate: document.getElementById('checkTemplate'),
             clearCustomersData: document.getElementById('clearCustomersData'),
             clearItemsData: document.getElementById('clearItemsData'),
             processButton: document.getElementById('processButton'),
             
             // 状态显示
             customersStatus: document.getElementById('customersStatus'),
-            itemsStatus: document.getElementById('itemsStatus')
+            itemsStatus: document.getElementById('itemsStatus'),
+            templateStatus: document.getElementById('templateStatus')
         };
     }
 
@@ -43,6 +47,8 @@ class UIController {
         // 保存数据按钮
         this.elements.saveCustomersData?.addEventListener('click', () => this.handleSaveCustomersData());
         this.elements.saveItemsData?.addEventListener('click', () => this.handleSaveItemsData());
+        this.elements.saveTemplate?.addEventListener('click', () => this.handleSaveTemplate());
+        this.elements.checkTemplate?.addEventListener('click', () => this.handleCheckTemplate());
         
         // 清除数据按钮
         this.elements.clearCustomersData?.addEventListener('click', () => this.handleClearData('customers'));
@@ -50,6 +56,64 @@ class UIController {
         
         // 处理按钮
         this.elements.processButton?.addEventListener('click', () => this.handleProcessFiles());
+    }
+
+    /**
+     * 处理保存开票模板
+     */
+    async handleSaveTemplate() {
+        const file = this.elements.templateFile?.files[0];
+        if (!file) {
+            alert('请先选择开票模板文件');
+            return;
+        }
+
+        try {
+            const base64 = await this.fileToBase64(file);
+            const ok = DataStorage.saveTemplateData(base64);
+            if (!ok) throw new Error('保存模板失败');
+            // 记录模板文件名
+            DataStorage.saveTemplateMeta({ filename: file.name });
+            alert('开票模板保存成功！');
+            this.updateStatus();
+        } catch (error) {
+            alert(error.message);
+        }
+    }
+
+    /**
+     * File -> Base64（用于持久化模板）
+     */
+    async fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const arrayBuffer = reader.result;
+                const bytes = new Uint8Array(arrayBuffer);
+                let binary = '';
+                const len = bytes.byteLength;
+                for (let i = 0; i < len; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                resolve(btoa(binary));
+            };
+            reader.onerror = () => reject(new Error('读取模板文件失败'));
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    /**
+     * 检测模板第二个工作表的表头读取情况
+     */
+    async handleCheckTemplate() {
+        try {
+            Logger.log('开始检测模板第二个工作表...');
+            await ExcelExporter.debugTemplateSheets();
+            Logger.success('模板检测完成');
+        } catch (e) {
+            Logger.error('模板检测失败: ' + e.message);
+            alert(e.message);
+        }
     }
 
     /**
@@ -77,6 +141,8 @@ class UIController {
 
         try {
             await this.processor.saveCustomersData(file);
+            // 记录客户文件名
+            DataStorage.saveCustomersMeta({ filename: file.name });
             alert('客户数据保存成功！');
             this.updateStatus();
         } catch (error) {
@@ -96,6 +162,8 @@ class UIController {
 
         try {
             await this.processor.saveItemsData(file);
+            // 记录项目文件名
+            DataStorage.saveItemsMeta({ filename: file.name });
             alert('项目数据保存成功！');
             this.updateStatus();
         } catch (error) {
@@ -114,6 +182,12 @@ class UIController {
 
         if (confirm(confirmMessages[type])) {
             this.processor.clearData(type);
+            // 同步清理文件名缓存
+            if (type === 'customers') {
+                DataStorage.clearCustomersMeta();
+            } else if (type === 'items') {
+                DataStorage.clearItemsMeta();
+            }
             this.updateStatus();
             alert('数据已清除');
         }
@@ -129,6 +203,13 @@ class UIController {
 
         if (!invoicesFile) {
             alert('请选择开票信息文件');
+            return;
+        }
+
+        // 校验是否已上传模板
+        const hasTemplate = !!(DataStorage.getTemplateData && DataStorage.getTemplateData());
+        if (!hasTemplate) {
+            alert('未检测到开票模板，请先在上方上传模板');
             return;
         }
 
@@ -161,13 +242,38 @@ class UIController {
      * 更新状态显示
      */
     updateStatus() {
-        const status = this.processor.getStatus();
-        
+        const customersData = DataStorage.getCustomersData();
+        const itemsData = DataStorage.getItemsData();
+        const templateBase64 = DataStorage.getTemplateData();
+
         if (this.elements.customersStatus) {
-            this.elements.customersStatus.textContent = status.customersData;
+            if (customersData) {
+                const meta = DataStorage.getCustomersMeta();
+                const name = meta?.filename || '未命名';
+                this.elements.customersStatus.textContent = `已缓存：${name}`;
+            } else {
+                this.elements.customersStatus.textContent = '无存储数据';
+            }
         }
+
         if (this.elements.itemsStatus) {
-            this.elements.itemsStatus.textContent = status.itemsData;
+            if (itemsData) {
+                const meta = DataStorage.getItemsMeta();
+                const name = meta?.filename || '未命名';
+                this.elements.itemsStatus.textContent = `已缓存：${name}`;
+            } else {
+                this.elements.itemsStatus.textContent = '无存储数据';
+            }
+        }
+
+        if (this.elements.templateStatus) {
+            if (templateBase64) {
+                const meta = DataStorage.getTemplateMeta();
+                const name = meta?.filename || '未命名';
+                this.elements.templateStatus.textContent = `已加载模板：${name}`;
+            } else {
+                this.elements.templateStatus.textContent = '未加载模板，请上传模板';
+            }
         }
     }
 }
