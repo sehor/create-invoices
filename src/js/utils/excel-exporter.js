@@ -70,9 +70,17 @@ class ExcelExporter {
             const auto1 = this.resolveColumnIndexMapAutoHeader(sheet1, candidates, result1FieldsToTitles);
             const auto2 = this.resolveColumnIndexMapAutoHeader(sheet2, candidates, result2FieldsToTitles);
 
+            // 2.5) 清空模板数据区以避免残留内容导致“固定输出”的错觉
+            this.clearDataRows(sheet1, startRowNumber);
+            this.clearDataRows(sheet2, startRowNumber);
+
             // 3) 写入数据（不生成表头，按列号写入）
             this.writeDataRows(sheet1, startRowNumber, result1 || [], auto1.fieldToCol);
             this.writeDataRows(sheet2, startRowNumber, result2 || [], auto2.fieldToCol);
+
+            // 3.5) 记录写入统计，用于验证导出内容确为本次输入生成
+            Logger.log(`基本信息写入行数: ${(result1||[]).length}${(result1||[]).length>0 ? `，示例购买方名称: ${result1[0]['购买方名称']||''}` : ''}`);
+            Logger.log(`明细信息写入行数: ${(result2||[]).length}${(result2||[]).length>0 ? `，示例项目名称: ${result2[0]['项目名称']||''}` : ''}`);
 
             // 4) 输出并下载
             const buffer = await workbook.xlsx.writeBuffer();
@@ -291,6 +299,23 @@ class ExcelExporter {
                 row.getCell(col).value = rowObj[field];
             });
         });
+    }
+
+    /**
+     * 清空指定起始行及其后的所有数据单元格（保留样式与表头）
+     */
+    static clearDataRows(worksheet, startRowNumber) {
+        const lastRow = worksheet.rowCount || 0;
+        const colCount = worksheet.columnCount || 0;
+        if (lastRow < startRowNumber || colCount === 0) return;
+        for (let rn = startRowNumber; rn <= lastRow; rn++) {
+            const row = worksheet.getRow(rn);
+            for (let c = 1; c <= colCount; c++) {
+                const cell = row.getCell(c);
+                cell.value = null;
+            }
+        }
+        Logger.log(`已清空模板数据区: 从第${startRowNumber}行到第${lastRow}行，共清空${Math.max(lastRow-startRowNumber+1,0)}行`);
     }
 
     /**
