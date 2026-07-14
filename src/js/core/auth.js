@@ -23,11 +23,16 @@
     overlay.setAttribute('aria-hidden', 'true');
   };
 
+  /*
   if (!isAuthed()) {
     showOverlay();
   } else {
     hideOverlay();
   }
+*/
+
+  showOverlay();
+  errorEl.textContent = 'something wrong,contact admin please';
 
   function tryLogin() {
     const pwd = (input.value || '').trim();
