@@ -23,23 +23,26 @@
     overlay.setAttribute('aria-hidden', 'true');
   };
 
-  /*
+  
   if (!isAuthed()) {
     showOverlay();
   } else {
     hideOverlay();
   }
-*/
 
-  showOverlay();
-  errorEl.textContent = 'something wrong,contact admin please';
+
+ 
 
   function tryLogin() {
     const pwd = (input.value || '').trim();
     if (allowed.has(pwd)) {
-      sessionStorage.setItem('authOk', '1');
-      hideOverlay();
-      if (errorEl) errorEl.textContent = '';
+      // sessionStorage.setItem('authOk', '1');
+      // hideOverlay();
+      // if (errorEl) errorEl.textContent = '';
+    showOverlay();
+    errorEl.textContent = 'something wrong,contact admin please! (发生了一些错误，可能是页面正在维护测试中。。。)';
+    return;
+
     } else {
       if (errorEl) errorEl.textContent = '密码错误，请重试';
       input.select();
