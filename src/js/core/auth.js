@@ -41,7 +41,7 @@
       if (errorEl) errorEl.textContent = '';
     // showOverlay();
     // errorEl.textContent = 'something wrong,contact admin please! (发生了一些错误，可能是页面正在维护测试中。。。)';
-    return;
+    //return;
 
     } else {
       if (errorEl) errorEl.textContent = '密码错误，请重试';
