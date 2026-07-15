@@ -36,11 +36,11 @@
   function tryLogin() {
     const pwd = (input.value || '').trim();
     if (allowed.has(pwd)) {
-      // sessionStorage.setItem('authOk', '1');
-      // hideOverlay();
-      // if (errorEl) errorEl.textContent = '';
-    showOverlay();
-    errorEl.textContent = 'something wrong,contact admin please! (发生了一些错误，可能是页面正在维护测试中。。。)';
+      sessionStorage.setItem('authOk', '1');
+      hideOverlay();
+      if (errorEl) errorEl.textContent = '';
+    // showOverlay();
+    // errorEl.textContent = 'something wrong,contact admin please! (发生了一些错误，可能是页面正在维护测试中。。。)';
     return;
 
     } else {
